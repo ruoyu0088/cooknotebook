@@ -4,10 +4,12 @@ static_folder = path.join(path.dirname(__file__), "static")
 
 resources = {
     "vis": ["vis.min.css", "vis.min.js"],
+    "raphael": ["raphael.min.js"]
 }
 
 pre_process = {
-    "vis.min.js": lambda s: s.replace('define.amd?define([],e)', 'define.amd?define("vis", [],e)')
+    "vis.min.js": lambda s: s.replace('define.amd?define([],e)', 'define.amd?define("vis", [],e)'),
+    "raphael.min.js": lambda s: s.replace('define.amd?define([],r)', 'define.amd?define("raphael",[],r)'),
 }
 
 
