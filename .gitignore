@@ -50,3 +50,6 @@ Temporary Items
 __pycache__
 .ipynb_checkpoints
 build
+
+setup.config
+test_compile*.*
