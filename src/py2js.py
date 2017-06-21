@@ -113,6 +113,20 @@ def draw_nonogram(parameter):
     display_javascript(run_js, raw=True)
 
 
+def py2js_call(func, parameter):
+    import json
+    import uuid
+    from IPython.display import display_html, display_javascript
+    from flexx.pyscript import py2js
+
+    parameter_js = json.dumps(parameter)
+    uid = str(uuid.uuid1()).replace("-", "")
+    display_html('<div id="{}"></div>'.format(uid), raw=True)
+    jscode = py2js(func)
+    run_js = "(function(parameter){%s; %s('%s', parameter);})(%s);" % (jscode, func.__name__, uid, parameter_js)
+    display_javascript(run_js, raw=True)
+
+
 def load_ipython_extension(ip):
     from IPython.core.magic import register_cell_magic
 
