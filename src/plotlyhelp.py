@@ -23,3 +23,25 @@ def init_plotly_online_mode():
     });
     """
     display_javascript(jscode, raw=True)
+
+
+def plot_points(points, marker_size=3):
+    from plotly.offline import iplot
+    import plotly.graph_objs as go
+
+    x, y, z = points[:3]
+
+    trace1 = go.Scatter3d(
+        x=x,
+        y=y,
+        z=z,
+        mode='markers',
+        marker=dict(size=marker_size)
+    )
+
+    data = [trace1]
+    layout = go.Layout(
+        margin=dict(l=0, r=0, b=0, t=0)
+    )
+    fig = go.Figure(data=data, layout=layout)
+    iplot(fig)
