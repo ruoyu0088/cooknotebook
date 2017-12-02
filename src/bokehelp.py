@@ -239,3 +239,93 @@ def make_image_viewer(func, inputs, nx=100, x0=0, x1=1, ny=100, y0=0, y1=1,
     colorbar = ColorBar(color_mapper=cmap, label_standoff=12, border_line_color=None, location=(0,0))
     fig.add_layout(colorbar, 'right')
     return row(fig, wbox)
+
+
+def make_curve_viewer(func, inputs, outputs, n=500, x0=0, dx=0.01, x_data=None,
+                      plot_width=600, plot_height=300, sliders_width=300,
+                      xlabel="t", ylabel="y", palette=None, fig_kwargs={}):
+    from itertools import cycle
+    from bokeh.plotting import figure
+    from bokeh.models import ColumnDataSource, Slider
+    from bokeh.models.callbacks import CustomJS
+    from bokeh.layouts import widgetbox, row
+    from bokeh.core import properties
+    from bokeh import palettes
+
+    if palette is None:
+        palette = palettes.Category10[10]
+
+    palette = cycle(palette)
+
+    for i, setting in enumerate(inputs):
+        if not isinstance(setting, dict):
+            name, start, end, step, *remain = setting
+            value = remain[0] if remain else start
+            inputs[i] = dict(title=name, start=start, end=end, step=step, value=value)
+
+    for setting in inputs:
+        if "name" not in setting:
+            setting["name"] = setting["title"]
+
+    sliders = [Slider(**setting) for setting in inputs]
+    data = dict(x=[0])
+
+    for setting in outputs:
+        if "legend" not in setting:
+            setting["legend"] = setting["name"]
+        setting["legend"] = properties.value(setting["legend"])
+        if "line_color" not in setting:
+            setting["line_color"] = next(palette)
+        data[setting["name"]] = [0]
+
+    source = ColumnDataSource(data=data)
+    fig = figure(plot_width=plot_width, plot_height=plot_height, **fig_kwargs)
+
+    for setting in outputs:
+        fig.line("x", setting["name"], source=source, **setting)
+
+    wbox = widgetbox(sliders, width=sliders_width)
+    args = dict(n=n, x0=x0, dx=dx)
+    if x_data is not None:
+        args["x_data"] = x_data
+
+    source.tags = [dict(func=compile_func(func), args=args)]
+
+    def callback(source=source, sliders=wbox):
+        if isinstance(source.tags[0].func, str):
+            source.tags[0].func = eval(source.tags[0].func)
+
+        func = source.tags[0].func
+        args = source.tags[0].args
+
+        if "x_data" not in args:
+            X = Float64Array(args.n)
+            for i in range(args.n):
+                X[i] = i * args.dx + args.x0
+            args.x_data = X
+
+        X = args.x_data
+
+        data = source.data
+
+        if len(data.x) != len(X):
+            for name in data:
+                data[name] = Float64Array(len(X))
+
+        pars = dict([(slider.name, slider.value) for slider in sliders.children])
+        for i in range(len(X)):
+            x = X[i]
+            data.x[i] = x
+            res = func(x, pars)
+            for key in res:
+                data[key][i] = res[key]
+
+        source.change.emit()
+
+    callback = CustomJS.from_py_func(callback)
+    for slider in wbox.children:
+        slider.js_on_change("value", callback)
+    fig.js_on_change("inner_width", callback)
+    fig.xaxis.axis_label = xlabel
+    fig.yaxis.axis_label = ylabel
+    return row(fig, wbox)

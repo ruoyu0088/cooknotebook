@@ -33,3 +33,23 @@ def cse2func(funcname, precodes, seq, printer_class=PythonPrinter):
     return code
 
 cse2func._history = {}
+
+
+def to_javascript(funcname, args, expr):
+    from sympy import cse, numbered_symbols
+    from sympy.printing import jscode
+
+    steps, res = cse(expr, symbols=numbered_symbols("_tmp"))
+    code = [
+        "window.{} = function(args){{".format(funcname)
+    ]
+
+    for i, v in enumerate(args):
+        code.append("var {} = args[{}];".format(str(v), i))
+
+    for v, e in steps:
+        code.append("var {} = {};".format(v, jscode(e)))
+
+    code.append("return [{}];".format(", ".join(jscode(r) for r in res)))
+    code.append("}")
+    return "\n".join(code).replace("\\", "")
